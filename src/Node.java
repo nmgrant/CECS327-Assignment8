@@ -13,14 +13,14 @@ public class Node {
       }
    }
 
-   public static void shuffleArray(char[] array) {
+   public void shuffleArray() {
       Random rng = new Random();
       
-      for (int i = array.length - 1; i > 0; i--) {
+      for (int i = charArray.length - 1; i > 0; i--) {
          int newPosition = rng.nextInt(i + 1);
-         char temp = array[i];
-         array[i] = array[newPosition];
-         array[newPosition] = temp;
+         char temp = charArray[i];
+         charArray[i] = charArray[newPosition];
+         charArray[newPosition] = temp;
       }
    }
 }
