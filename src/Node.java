@@ -1,6 +1,7 @@
+import java.io.Serializable;
 import java.util.Random;
 
-public class Node {
+public class Node implements Serializable {
    private char[] charArray;
 
    public Node() {
@@ -22,5 +23,9 @@ public class Node {
          charArray[i] = charArray[newPosition];
          charArray[newPosition] = temp;
       }
+   }
+   
+   public char getFirst() {
+      return charArray[0];
    }
 }
