@@ -1,21 +1,23 @@
 
 import java.net.*;
 import java.io.*;
-import java.util.StringTokenizer;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Server {
 
    public static void main(String[] args) {
+      System.out.println("Server is running");
+      int clientNumber = 0;
+      CopyOnWriteArrayList<Node> nodes = new CopyOnWriteArrayList(new Node[150]);
       try {
-         ServerSocket server
-                 = new ServerSocket(Integer.parseInt(args[0]));
+         ServerSocket listener
+            = new ServerSocket(Integer.parseInt(args[0]));
          while (true) {
-            Socket client = server.accept();
-            new ClientThread(client);
+            new ClientThread(listener.accept(), clientNumber++, nodes).start();
             System.out.println("ThreadedWebServer Connected to "
-                    + client.getInetAddress());
+               + listener.getInetAddress());
          }
-      } catch (Exception e) {
+      } catch (NumberFormatException | IOException e) {
          e.printStackTrace();
       }
    }
@@ -23,46 +25,34 @@ public class Server {
 
 class ClientThread extends Thread {
 
-   Socket client;
-   BufferedReader fromClient;
-   PrintWriter toClient;
+   private Socket client;
+   private ObjectInputStream fromClient;
+   private ObjectOutputStream toClient;
+   private int clientNumber;
 
-   public ClientThread(Socket c) {
+   public ClientThread(Socket socket, int clientNum, CopyOnWriteArrayList<Node> node) {
+      this.clientNumber = clientNum;
       try {
-         client = c;
-         fromClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
-         toClient = new PrintWriter(client.getOutputStream(), true);
-         start();
-      } catch (Exception e) {
+         this.client = socket;
+         this.fromClient = new ObjectInputStream(client.getInputStream());
+         this.toClient = new ObjectOutputStream(client.getOutputStream());
+         
+         toClient.writeObject(node);
+      } catch (NumberFormatException | IOException e) {
          e.printStackTrace();
       }
    }
 
+   @Override
    public void run() {
       try {
-         String s;
-         s = fromClient.readLine();
-         StringTokenizer tokens = new StringTokenizer(s);
-         if (!(tokens.nextToken()).equals("GET")) {
-            toClient.println("HTTP/1.0 501 Not Implemented");
-            toClient.println();
-         } else {
-            String filename = tokens.nextToken();
-            while (!(s = fromClient.readLine()).equals(""));
-            BufferedReader file
-                    = new BufferedReader(new FileReader(filename));
-            toClient.println("HTTP/1.0 200 OK");
-            toClient.println("Content-type: text/plain");
-            toClient.println();
-            while ((s = file.readLine()) != null) {
-               toClient.println(s);
-            }
-            file.close();
-         }
+         System.out.println("Client: " + clientNumber + " is connecting");
+         
+        
          fromClient.close();
          toClient.close();
          client.close();
-      } catch (Exception e) {
+      } catch (NumberFormatException | IOException e) {
          e.printStackTrace();
       }
    }
