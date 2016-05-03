@@ -4,15 +4,21 @@ import java.util.Random;
 
 public class Node implements Serializable {
    private char[] charArray;
+   private int index;
 
-   public Node() {
+   public Node(int index) {
       charArray = new char[500];
+      this.index = index;
 
       for (int i = 0; i < charArray.length; i++) {
          Random rng = new Random();
          char initValue = (char) (rng.nextInt(52) + 'A');
          charArray[i] = initValue;
       }
+   }
+
+   public int getIndex() {
+      return index;
    }
 
    public void shuffleArray() {
