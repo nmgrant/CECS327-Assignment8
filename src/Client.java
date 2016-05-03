@@ -16,6 +16,7 @@ public class Client {
    private Worker[] workers;
    private ReentrantLock[] workerLocks = new ReentrantLock[100];
    private Condition[] workerConditions = new Condition[100];
+   private ThreadGroup workerGroup;
 
    public Client() {
       workers = new Worker[100];
@@ -23,6 +24,7 @@ public class Client {
          workerLocks[i] = new ReentrantLock();
          workerConditions[i] = workerLocks[i].newCondition();
       }
+      workerGroup = new ThreadGroup("Workers");
 //      if (args.length != 2) {
 //         System.out.println("Usage: java VerySimpleBrowser host port");
 //         System.exit(1);
@@ -41,7 +43,7 @@ public class Client {
          nodes = (AtomicReferenceArray<Node>) fromServer.readObject();
 
          for (int i = 0; i < workers.length; i++) {
-            workers[i] = new Worker(nodes, toServer, fromServer, workerLocks[i],
+            workers[i] = new Worker(workerGroup, nodes, toServer, fromServer, workerLocks[i],
                     workerConditions[i], oosLock, i);
          }
 
@@ -50,13 +52,14 @@ public class Client {
             worker.start();
          }
 
-         while (true) {
+         do {
             Object in;
             try {
                in = fromServer.readObject();
                if (in instanceof Node) {
                   Node node = (Node) in;
                   nodes.set(node.getIndex(), node);
+                  System.out.println("Node " + node.getIndex() + ": " + nodes.get(node.getIndex()).getChars());
                } else if (in instanceof UpdateResponse) {
                   UpdateResponse response = (UpdateResponse) in;
                   int worker = response.getWorkerID();
@@ -80,7 +83,13 @@ public class Client {
                toServer.close();
                server.close();
             }
-         }
+         } while (workerGroup.activeCount() > 2);
+         
+         
+         System.out.println("Threads finished");
+         fromServer.close();
+         toServer.close();
+         server.close();
       } catch (Exception e) {
          e.printStackTrace();
       }

@@ -26,7 +26,9 @@ public class Server {
                  = new ServerSocket(3333);
          while (true) {
             Socket socket = listener.accept();
-            (new ClientThread(socket, clientNumber++, nodes)).start();
+            ClientThread client = new ClientThread(socket, clientNumber++, nodes);
+            clients.add(client);
+            client.start();
             System.out.println("ThreadedWebServer Connected to "
                     + listener.getInetAddress());
          }
@@ -37,13 +39,11 @@ public class Server {
 
    public static void shareToAll(Node node, int sendingClient) {
       for (int i = 0; i < clients.size(); i++) {
-         if (i != sendingClient) {
-            try {
-               clients.get(i).getToClient().writeObject(node);
-               clients.get(i).getToClient().flush();
-            } catch (IOException ex) {
-               Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-            }
+         try {
+            (clients.get(i)).getToClient().writeObject(node);
+            (clients.get(i)).getToClient().flush();
+         } catch (IOException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
          }
       }
    }
@@ -101,6 +101,7 @@ public class Server {
                      nodes.set(index, updatedNode);
                      shareToAll((Node) in, clientNumber);
                      tokens[index] = false;
+                     System.out.println("Node " + index + ": " + updatedNode.getChars());
                   }
                }
             } catch (ClassNotFoundException ex) {

@@ -19,8 +19,9 @@ public class Worker extends Thread {
    Condition updateNode;
    boolean canUpdate;
 
-   public Worker(AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
+   public Worker(ThreadGroup wG, AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
            ObjectInputStream ois, ReentrantLock l, Condition c, ReentrantLock oosLock, int wn) {
+      super(wG, "Worker #1");
       this.nodeArray = nodeArray;
       this.output = oos;
       this.input = ois;
@@ -31,7 +32,7 @@ public class Worker extends Thread {
    }
 
    public void run() {
-      for (int i = 0; i < 200; i++) {
+      for (int i = 0; i < 10; i++) {
          int nodeIndex = new Random().nextInt(nodeArray.length());
          try {
             try {
@@ -55,7 +56,7 @@ public class Worker extends Thread {
                oosLock.lock();
                try {
                   output.writeObject(update(nodeIndex));
-                  System.out.println(workerNumber + " is shuffling " + nodeIndex);
+                  System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
                } finally {
                   oosLock.unlock();
                }

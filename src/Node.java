@@ -8,13 +8,13 @@ public class Node implements Serializable {
    private int worker;
 
    public Node(int index, int worker) {
-      charArray = new char[500];
+      charArray = new char[5];
       this.index = index;
       this.worker = worker;
 
       for (int i = 0; i < charArray.length; i++) {
          Random rng = new Random();
-         char initValue = (char) (rng.nextInt(52) + 'A');
+         char initValue = (char) (rng.nextInt(26) + 'A');
          charArray[i] = initValue;
       }
    }
@@ -40,6 +40,14 @@ public class Node implements Serializable {
          charArray[i] = charArray[newPosition];
          charArray[newPosition] = temp;
       }
+   }
+   
+   public String getChars() {
+      String result = "";
+      for (char c : charArray) {
+         result += c;
+      }
+      return result;
    }
 
    public char getFirst() {
