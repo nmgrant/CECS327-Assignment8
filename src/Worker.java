@@ -39,11 +39,9 @@ public class Worker extends Thread {
                   lock.lock();
                   try {
 
-                     UpdateRequest request = new UpdateRequest(workerNumber, nodeIndex);
                      oosLock.lock();
                      try {
-                        output.writeObject(request);
-                        output.flush();
+                        output.writeObject(new UpdateRequest(workerNumber, nodeIndex));
                      } finally {
                         oosLock.unlock();
                      }
@@ -53,12 +51,11 @@ public class Worker extends Thread {
                      lock.unlock();
                   }
                } while (!canUpdate);
-               System.out.println("Thread #" + workerNumber + " updating");
 
                oosLock.lock();
                try {
                   output.writeObject(update());
-                  output.flush();
+                  System.out.println(nodeIndex + " shuffled.");
                } finally {
                   oosLock.unlock();
                }

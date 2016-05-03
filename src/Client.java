@@ -60,6 +60,7 @@ public class Client {
                } else if (in instanceof UpdateResponse) {
                   UpdateResponse response = (UpdateResponse) in;
                   int worker = response.getWorkerID();
+                  int node = response.getWorkerNode();
                   boolean canUpdate = response.isAvailable();
 
                   if (canUpdate) {

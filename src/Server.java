@@ -2,6 +2,7 @@
 import java.net.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,6 +55,7 @@ public class Server {
       ObjectInputStream fromClient;
       ObjectOutputStream toClient;
       private AtomicReferenceArray<Node> nodes;
+      private LinkedBlockingQueue<UpdateRequest> requests = new LinkedBlockingQueue<>();
 
       public ClientThread(Socket socket, int clientNum, AtomicReferenceArray<Node> nodes) {
          this.client = socket;
@@ -78,24 +80,20 @@ public class Server {
 
             System.out.println("Sending nodes...");
             toClient.writeObject(nodes);
-            toClient.flush();
             Object in;
             try {
                while (true) {
                   in = fromClient.readObject();
                   if (in instanceof UpdateRequest) {
-                     System.out.println("Request received");
                      UpdateRequest request = (UpdateRequest)in;
                      int worker = request.getWorkerID();
                      int node = request.getWorkerNode();
-                     System.out.println(node);
                      if (!tokens[node]) {
                         toClient.writeObject(new UpdateResponse(worker, node, true));
-                        toClient.flush();
-                        tokens[node] = !tokens[node];
+                        tokens[node] = true;
                      } else {
+                        requests.add(request);
                         toClient.writeObject(new UpdateResponse(worker, node, false));
-                        toClient.flush();
                      }
                   }
                   if (in instanceof Node) {
@@ -103,7 +101,7 @@ public class Server {
                      int index = ((Node) in).getIndex();
                      nodes.set(index, updatedNode);
                      shareToAll((Node) in, clientNumber);
-                     tokens[index] = !tokens[index];
+                     tokens[index] = false;
                   }
                }
             } catch (ClassNotFoundException ex) {
