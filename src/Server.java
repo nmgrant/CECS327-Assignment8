@@ -16,7 +16,7 @@ public class Server {
 
    public static void main(String[] args) {
       for (int i = 0; i < nodes.length(); i++) {
-         nodes.set(i, new Node(i));
+         nodes.set(i, new Node(i, 0));
       }
 
       System.out.println("Server is running");
@@ -78,14 +78,13 @@ public class Server {
             toClient = new ObjectOutputStream(client.getOutputStream());
             fromClient = new ObjectInputStream(client.getInputStream());
 
-            System.out.println("Sending nodes...");
             toClient.writeObject(nodes);
             Object in;
             try {
                while (true) {
                   in = fromClient.readObject();
                   if (in instanceof UpdateRequest) {
-                     UpdateRequest request = (UpdateRequest)in;
+                     UpdateRequest request = (UpdateRequest) in;
                      int worker = request.getWorkerID();
                      int node = request.getWorkerNode();
                      if (!tokens[node]) {
@@ -111,6 +110,10 @@ public class Server {
                toClient.close();
                client.close();
             }
+
+            fromClient.close();
+            toClient.close();
+            client.close();
          } catch (NumberFormatException | IOException e) {
             e.printStackTrace();
          }

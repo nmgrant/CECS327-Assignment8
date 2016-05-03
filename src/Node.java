@@ -5,10 +5,12 @@ import java.util.Random;
 public class Node implements Serializable {
    private char[] charArray;
    private int index;
+   private int worker;
 
-   public Node(int index) {
+   public Node(int index, int worker) {
       charArray = new char[500];
       this.index = index;
+      this.worker = worker;
 
       for (int i = 0; i < charArray.length; i++) {
          Random rng = new Random();
@@ -19,6 +21,14 @@ public class Node implements Serializable {
 
    public int getIndex() {
       return index;
+   }
+   
+   public int getWorker() {
+      return worker;
+   }
+   
+   public void setWorker(int w) {
+      worker = w;
    }
 
    public void shuffleArray() {
