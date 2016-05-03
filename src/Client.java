@@ -54,17 +54,22 @@ public class Client {
             if (in instanceof Node) {
                Node node = (Node) in;
                nodes.set(node.getIndex(), node);
-            } else if (in instanceof String) {
-               String response = (String) in;
-               int worker = Integer.parseInt((response.substring(0, 2)));
-               int canUpdate = Integer.parseInt(response.substring(3));
+            } else if (in instanceof UpdateResponse) {
+               UpdateResponse response = (UpdateResponse)in;
+               int worker = response.getWorkerID();
+               boolean canUpdate = response.isAvailable();
 
-               if (canUpdate == 1) {
+               if (canUpdate) {
                   workers[worker].setCanUpdate(true);
                } else {
                   workers[worker].setCanUpdate(false);
                }
-               workerConditions[worker].signal();
+               workerLocks[worker].lock();
+               try {
+                  workerConditions[worker].signal();
+               } finally {
+                  workerLocks[worker].unlock();
+               }
             }
          }
 

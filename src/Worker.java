@@ -36,8 +36,8 @@ public class Worker extends Thread {
                do {
                   lock.lock();
                   try {
-                     output.writeObject(String.format("%02d", workerNumber)
-                          + "REQUESTS" + String.format("%03d", nodeIndex));
+                     UpdateRequest request = new UpdateRequest(workerNumber, nodeIndex);
+                     output.writeObject(request);
                      updateNode.await();
                   } finally {
                      lock.unlock();

@@ -81,14 +81,15 @@ public class Server {
             Object in;
             try {
                while ((in = fromClient.readObject()) != null) {
-                  if (in instanceof String) {
-                     int worker = Integer.parseInt(((String) in).substring(0, 2));
-                     int node = Integer.parseInt(((String) in).substring(11));
+                  if (in instanceof UpdateRequest) {
+                     UpdateRequest request = (UpdateRequest)in;
+                     int worker = request.getWorkerID();
+                     int node = request.getWorkerNode();
                      if (!tokens[node]) {
-                        toClient.writeObject(String.format("%02d", worker) + " 1");
+                        toClient.writeObject(new UpdateResponse(worker, node, true));
                         tokens[node] = !tokens[node];
                      } else {
-                        toClient.writeObject(String.format("%02d", worker) + " 0");
+                        toClient.writeObject(new UpdateResponse(worker, node, false));
                      }
                   }
                   if (in instanceof Node) {
