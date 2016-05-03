@@ -11,7 +11,7 @@ public class Server {
    static int clientNumber = 0;
    static AtomicReferenceArray<Node> nodes = new AtomicReferenceArray<>(150);
    static ArrayList<ClientThread> clients = new ArrayList<>();
-   static boolean[] tokens = new boolean[nodes.length()];
+   static boolean[] tokens = new boolean[150];
 
    public static void main(String[] args) {
       for (int i = 0; i < nodes.length(); i++) {
@@ -34,11 +34,12 @@ public class Server {
       }
    }
 
-   public static void shareToAll(Object node, int sendingClient) {
+   public static void shareToAll(Node node, int sendingClient) {
       for (int i = 0; i < clients.size(); i++) {
          if (i != sendingClient) {
             try {
                clients.get(i).getToClient().writeObject(node);
+               clients.get(i).getToClient().flush();
             } catch (IOException ex) {
                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -74,22 +75,27 @@ public class Server {
          try {
             toClient = new ObjectOutputStream(client.getOutputStream());
             fromClient = new ObjectInputStream(client.getInputStream());
-            
+
             System.out.println("Sending nodes...");
             toClient.writeObject(nodes);
             toClient.flush();
             Object in;
             try {
-               while ((in = fromClient.readObject()) != null) {
+               while (true) {
+                  in = fromClient.readObject();
                   if (in instanceof UpdateRequest) {
+                     System.out.println("Request received");
                      UpdateRequest request = (UpdateRequest)in;
                      int worker = request.getWorkerID();
                      int node = request.getWorkerNode();
+                     System.out.println(node);
                      if (!tokens[node]) {
                         toClient.writeObject(new UpdateResponse(worker, node, true));
+                        toClient.flush();
                         tokens[node] = !tokens[node];
                      } else {
                         toClient.writeObject(new UpdateResponse(worker, node, false));
+                        toClient.flush();
                      }
                   }
                   if (in instanceof Node) {
@@ -102,11 +108,11 @@ public class Server {
                }
             } catch (ClassNotFoundException ex) {
                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (EOFException ef) {
+               fromClient.close();
+               toClient.close();
+               client.close();
             }
-
-            fromClient.close();
-            toClient.close();
-            client.close();
          } catch (NumberFormatException | IOException e) {
             e.printStackTrace();
          }

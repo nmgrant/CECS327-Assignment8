@@ -5,6 +5,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Client {
 
@@ -35,12 +37,12 @@ public class Client {
 
          toServer = new ObjectOutputStream(server.getOutputStream());
          fromServer = new ObjectInputStream(server.getInputStream());
-
+         ReentrantLock oosLock = new ReentrantLock();
          nodes = (AtomicReferenceArray<Node>) fromServer.readObject();
 
-         System.out.println("Nodes: " + nodes);
          for (int i = 0; i < workers.length; i++) {
-            workers[i] = new Worker(nodes, toServer, fromServer, workerLocks[i], workerConditions[i], i);
+            workers[i] = new Worker(nodes, toServer, fromServer, workerLocks[i],
+                    workerConditions[i], oosLock, i);
          }
 
          for (Worker worker : workers) {
@@ -48,34 +50,36 @@ public class Client {
             worker.start();
          }
 
-         Object in;
+         while (true) {
+            Object in;
+            try {
+               in = fromServer.readObject();
+               if (in instanceof Node) {
+                  Node node = (Node) in;
+                  nodes.set(node.getIndex(), node);
+               } else if (in instanceof UpdateResponse) {
+                  UpdateResponse response = (UpdateResponse) in;
+                  int worker = response.getWorkerID();
+                  boolean canUpdate = response.isAvailable();
 
-         while ((in = fromServer.readObject()) != null) {
-            if (in instanceof Node) {
-               Node node = (Node) in;
-               nodes.set(node.getIndex(), node);
-            } else if (in instanceof UpdateResponse) {
-               UpdateResponse response = (UpdateResponse)in;
-               int worker = response.getWorkerID();
-               boolean canUpdate = response.isAvailable();
-
-               if (canUpdate) {
-                  workers[worker].setCanUpdate(true);
-               } else {
-                  workers[worker].setCanUpdate(false);
+                  if (canUpdate) {
+                     workers[worker].setCanUpdate(true);
+                  } else {
+                     workers[worker].setCanUpdate(false);
+                  }
+                  workerLocks[worker].lock();
+                  try {
+                     workerConditions[worker].signal();
+                  } finally {
+                     workerLocks[worker].unlock();
+                  }
                }
-               workerLocks[worker].lock();
-               try {
-                  workerConditions[worker].signal();
-               } finally {
-                  workerLocks[worker].unlock();
-               }
+            } catch (EOFException ef) {
+               fromServer.close();
+               toServer.close();
+               server.close();
             }
          }
-
-         fromServer.close();
-         toServer.close();
-         server.close();
       } catch (Exception e) {
          e.printStackTrace();
       }
@@ -84,5 +88,23 @@ public class Client {
    public static void main(String[] args) {
       Client client = new Client();
       client.connectToServer("localhost", 3333);
+   }
+
+   public class RequestHandler extends Thread {
+
+      private ObjectOutputStream toServer;
+
+      public RequestHandler(ObjectOutputStream oos) {
+         toServer = oos;
+      }
+
+      public void sendRequest(Object object) {
+         try {
+            toServer.writeObject(object);
+            toServer.flush();
+         } catch (IOException ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+         }
+      }
    }
 }

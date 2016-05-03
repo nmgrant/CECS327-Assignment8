@@ -15,17 +15,19 @@ public class Worker extends Thread {
    ObjectInputStream input;
    int workerNumber;
    ReentrantLock lock;
+   ReentrantLock oosLock;
    Condition updateNode;
    boolean canUpdate;
 
    public Worker(AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
-    ObjectInputStream ois, ReentrantLock l, Condition c, int wn) {
+           ObjectInputStream ois, ReentrantLock l, Condition c, ReentrantLock oosLock, int wn) {
       this.nodeArray = nodeArray;
       this.output = oos;
       this.input = ois;
       workerNumber = wn;
       lock = l;
       updateNode = c;
+      this.oosLock = oosLock;
    }
 
    public void run() {
@@ -36,15 +38,31 @@ public class Worker extends Thread {
                do {
                   lock.lock();
                   try {
+
                      UpdateRequest request = new UpdateRequest(workerNumber, nodeIndex);
-                     output.writeObject(request);
+                     oosLock.lock();
+                     try {
+                        output.writeObject(request);
+                        output.flush();
+                     } finally {
+                        oosLock.unlock();
+                     }
+
                      updateNode.await();
                   } finally {
                      lock.unlock();
                   }
                } while (!canUpdate);
                System.out.println("Thread #" + workerNumber + " updating");
-               output.writeObject(update());
+
+               oosLock.lock();
+               try {
+                  output.writeObject(update());
+                  output.flush();
+               } finally {
+                  oosLock.unlock();
+               }
+
             } catch (InterruptedException ex) {
                Logger.getLogger(Worker.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -63,7 +81,7 @@ public class Worker extends Thread {
    public Condition getUpdateNode() {
       return updateNode;
    }
-   
+
    public void setCanUpdate(boolean canUpdate) {
       this.canUpdate = canUpdate;
    }
