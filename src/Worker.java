@@ -34,7 +34,8 @@ public class Worker extends Thread {
 
    // Used to initialize the worker with all necessary variables
    public Worker(AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
-           ObjectInputStream ois, ReentrantLock l, Condition c, ReentrantLock oosLock, int wn) {
+           ObjectInputStream ois, ReentrantLock l, Condition c, 
+           ReentrantLock oosLock, int wn) {
       this.nodeArray = nodeArray;
       this.output = oos;
       workerNumber = wn;
@@ -62,7 +63,8 @@ public class Worker extends Thread {
                      try {
                         // Send a request to the server containing this
                         // worker's ID and the node they wish to update
-                        output.writeObject(new UpdateRequest(workerNumber, nodeIndex));
+                        output.writeObject(
+                                new UpdateRequest(workerNumber, nodeIndex));
                         output.flush();
                      } finally {
                         oosLock.unlock();
@@ -86,16 +88,19 @@ public class Worker extends Thread {
                   output.writeObject(nodeArray.get(nodeIndex));
                   output.flush();
                   // Print out the newly shuffled node
-                  System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
+                  System.out.println(workerNumber + " shuffled " + nodeIndex + 
+                          " to " + nodeArray.get(nodeIndex).getChars());
                } finally {
                   oosLock.unlock();
                }
 
             } catch (InterruptedException ex) {
-               Logger.getLogger(Worker.class.getName()).log(Level.SEVERE, null, ex);
+               Logger.getLogger(
+                       Worker.class.getName()).log(Level.SEVERE, null, ex);
             }
          } catch (IOException ex) {
-            Logger.getLogger(Worker.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(
+                    Worker.class.getName()).log(Level.SEVERE, null, ex);
          }
          try {
             // 10ms delay

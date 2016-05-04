@@ -96,7 +96,8 @@ public class Client {
          toServer.flush();
          // Sets fromServer to a new object input stream from the server's input
          // stream
-         fromServer = new ObjectInputStream(new BufferedInputStream(server.getInputStream()));
+         fromServer = new ObjectInputStream(
+                 new BufferedInputStream(server.getInputStream()));
          // Sets a new object output stream lock to a new reentrant lock
          ReentrantLock oosLock = new ReentrantLock();
          // Sets node to the read node object from server
@@ -131,9 +132,10 @@ public class Client {
                   Node node = (Node) in;
                   // Sets nodes to the given index and the read node
                   nodes.set(node.getIndex(), node);
-                  System.out.println("Node " + node.getIndex() + " received: " + node.getChars());
-                  // Else if the read object is of type update response run through
-                  // this else if statement
+                  System.out.println("Node " + 
+                          node.getIndex() + " received: " + node.getChars());
+                  // Else if the read object is of type update response run 
+                  // through this else if statement
                } else if (in instanceof UpdateResponse) {
                   // Sets an updateresponse object to the read object
                   UpdateResponse response = (UpdateResponse) in;
@@ -171,63 +173,12 @@ public class Client {
                toServer.close();
                server.close();
             } catch (IOException | ClassNotFoundException ex) {
-               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+               Logger.getLogger(
+                       Client.class.getName()).log(Level.SEVERE, null, ex);
             }
          }
       } catch (IOException | ClassNotFoundException e) {
          e.printStackTrace();
       }
    }
-//   public class ResponseHandler extends Thread {
-//
-//      public ResponseHandler() {
-//      }
-//
-//      @Override
-//      public void run() {
-//         while (true) {
-//            Object in = null;
-//            try {
-//               try {
-//                  in = fromServer.readObject();
-//               } catch (SocketException ex) {
-//                  System.out.println("socket closed");
-//                  server.close();
-//                  break;
-//               }
-//               if (in instanceof Node) {
-//                  Node node = (Node) in;
-//                  nodes.set(node.getIndex(), node);
-//               } else if (in instanceof UpdateResponse) {
-//                  UpdateResponse response = (UpdateResponse) in;
-//                  int worker = response.getWorkerID();
-//                  int node = response.getWorkerNode();
-//                  boolean canUpdate = response.isAvailable();
-//
-//                  if (canUpdate) {
-//                     workers[worker].setCanUpdate(true);
-//                  } else {
-//                     workers[worker].setCanUpdate(false);
-//                  }
-//                  workerLocks[worker].lock();
-//                  try {
-//                     workerConditions[worker].signal();
-//                  } finally {
-//                     workerLocks[worker].unlock();
-//                  }
-//               }
-//            } catch (EOFException eof) {
-//               try {
-//                  System.out.println("socket closed2");
-//                  server.close();
-//                  break;
-//               } catch (IOException ioe) {
-//                  Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ioe);
-//               }
-//            } catch (IOException | ClassNotFoundException ex) {
-//               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//         }
-//      }
-//   }
 }

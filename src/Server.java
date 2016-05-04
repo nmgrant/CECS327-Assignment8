@@ -28,7 +28,8 @@ public class Server {
    // Initalize a hash set of objectoutputstream objects
    private static HashSet<ObjectOutputStream> clients = new HashSet<>();
    // Initialize an integer array of tokens with the number of nodes
-   private static AtomicIntegerArray tokens = new AtomicIntegerArray(NUM_OF_NODES);
+   private static AtomicIntegerArray tokens = 
+           new AtomicIntegerArray(NUM_OF_NODES);
    // Declare an object output stream lock used to prevent corrupt data
    private static ReentrantLock oosLock;
 
@@ -204,7 +205,8 @@ public class Server {
                            // writes the new Updated response to the client,
                            // and finally flushes 
                            toClient.reset();
-                           toClient.writeObject(new UpdateResponse(worker, node, true));
+                           toClient.writeObject(
+                                   new UpdateResponse(worker, node, true));
                            toClient.flush();
                         } finally {
                            // Finally unlocks the object output stream lock
@@ -220,7 +222,8 @@ public class Server {
                            // writes the new uppdated response to the client, 
                            // and finally flushes
                            toClient.reset();
-                           toClient.writeObject(new UpdateResponse(worker, node, false));
+                           toClient.writeObject(
+                                   new UpdateResponse(worker, node, false));
                            toClient.flush();
                         } finally {
                            // Finally unlocks the object output stream lock
@@ -260,7 +263,8 @@ public class Server {
                   }
                }
             } catch (ClassNotFoundException ex) {
-               Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+               Logger.getLogger(
+                       Server.class.getName()).log(Level.SEVERE, null, ex);
             } catch (EOFException ef) {
                client.close();
             }
