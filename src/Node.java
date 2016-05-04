@@ -44,8 +44,8 @@ public class Node implements Serializable {
    
    public String getChars() {
       String result = "";
-      for (char c : charArray) {
-         result += c;
+      for (int i = 0; i < 5; i++) {
+         result += charArray[i];
       }
       return result;
    }

@@ -18,6 +18,11 @@ public class UpdateResponse implements Serializable {
       workerNode = wN;
       available = a;
    }
+   
+   @Override
+   public String toString() {
+     return ("Response: Worker: " + workerID + " Node: " + workerNode);
+   }
 
    public int getWorkerID() {
       return workerID;

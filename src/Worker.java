@@ -43,6 +43,7 @@ public class Worker extends Thread {
                      oosLock.lock();
                      try {
                         output.writeObject(new UpdateRequest(workerNumber, nodeIndex));
+                        output.flush();
                      } finally {
                         oosLock.unlock();
                      }
@@ -57,7 +58,8 @@ public class Worker extends Thread {
                try {
                   update(nodeIndex);
                   output.writeObject(nodeArray.get(nodeIndex));
-                  //System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
+                  output.flush();
+                  System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
                } finally {
                   oosLock.unlock();
                }

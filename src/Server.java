@@ -2,6 +2,7 @@
 import java.net.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -14,8 +15,9 @@ public class Server {
 
    static int clientNumber = 0;
    static AtomicReferenceArray<Node> nodes = new AtomicReferenceArray<>(150);
-   static ArrayList<ClientThread> clients = new ArrayList<>();
-   static AtomicIntegerArray tokens = new AtomicIntegerArray(150);
+   static HashSet<ObjectOutputStream> clients = new HashSet<>();
+   static boolean[] tokens = new boolean[150];
+   static ReentrantLock oosLock;
 
    public static void main(String[] args) {
       for (int i = 0; i < nodes.length(); i++) {
@@ -24,6 +26,8 @@ public class Server {
 
       System.out.println("Server is running");
 
+      oosLock = new ReentrantLock();
+
       try {
          ServerSocket listener
                  = new ServerSocket(3333);
@@ -31,7 +35,6 @@ public class Server {
             Socket socket = listener.accept();
             ClientThread client = new ClientThread(socket, clientNumber++, nodes);
             client.start();
-            clients.add(client);
             System.out.println("ThreadedWebServer Connected to "
                     + listener.getInetAddress());
          }
@@ -40,33 +43,24 @@ public class Server {
       }
    }
 
-   public static void removeDisconnectedClient(ClientThread client) {
-      Iterator<ClientThread> iter = clients.iterator();
+   public static void removeDisconnectedClient(ObjectOutputStream out) {
+      Iterator<ObjectOutputStream> iter = clients.iterator();
 
       while (iter.hasNext()) {
-         ClientThread thread = iter.next();
+         ObjectOutputStream oos = iter.next();
 
-         if (thread == client) {
+         if (oos == out) {
             iter.remove();
-         }
-      }
-
-      for (ClientThread thread : clients) {
-         if (thread == client) {
-            clients.remove(thread);
          }
       }
    }
 
-   public static void shareToAll(Node node, int sendingClient) {
-      for (int i = 0; i < clients.size(); i++) {
-         if (clients.get(i).getClientNumber() != sendingClient) {
-            try {
-               (clients.get(i)).getToClient().writeObject(node);
-               (clients.get(i)).getToClient().flush();
-            } catch (IOException ex) {
-               Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-            }
+   public static void shareToAll(Node node) {
+      for (ObjectOutputStream out : clients) {
+         try {
+            out.writeObject(node);
+         } catch (IOException ex) {
+            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
          }
       }
    }
@@ -81,10 +75,13 @@ public class Server {
       private LinkedBlockingQueue<UpdateRequest> requests = new LinkedBlockingQueue<>();
 
       public ClientThread(Socket socket, int clientNum, AtomicReferenceArray<Node> nodes) {
+
          this.client = socket;
          this.clientNumber = clientNum;
          this.nodes = nodes;
+
          System.out.println("New connection with client# " + clientNumber + " at " + socket);
+
       }
 
       public ObjectInputStream getFromClient() {
@@ -94,7 +91,7 @@ public class Server {
       public ObjectOutputStream getToClient() {
          return toClient;
       }
-      
+
       public int getClientNumber() {
          return clientNumber;
       }
@@ -102,37 +99,75 @@ public class Server {
       @Override
       public void run() {
          try {
-            toClient = new ObjectOutputStream(client.getOutputStream());
-            fromClient = new ObjectInputStream(client.getInputStream());
+
+            toClient = new ObjectOutputStream(new BufferedOutputStream(client.getOutputStream()));
+            toClient.flush();
+            fromClient = new ObjectInputStream(new BufferedInputStream(client.getInputStream()));
 
             toClient.writeObject(nodes);
+            toClient.flush();
+
+            clients.add(toClient);
+
             Object in;
             try {
                while (true) {
                   try {
+                     int total = 0;
+                     for (int i = 0; i < tokens.length; i++) {
+                        if (tokens[i]) {
+                           total++;
+                        }
+                     }
+                     System.out.println(total);
                      in = fromClient.readObject();
-                  } catch(SocketException ex) {
+                  } catch (SocketException ex) {
                      break;
-                  } catch(IOException ex) {
+                  } catch (IOException ex) {
                      break;
                   }
                   if (in instanceof UpdateRequest) {
                      UpdateRequest request = (UpdateRequest) in;
                      int worker = request.getWorkerID();
                      int node = request.getWorkerNode();
-                     if (tokens.compareAndSet(node, 0, 1)) {
-                        toClient.writeObject(new UpdateResponse(worker, node, true));
+                     if (!tokens[node]) {
+                        oosLock.lock();
+                        try {
+                           toClient.writeObject(new UpdateResponse(worker, node, true));
+                           toClient.flush();
+                           tokens[node] = true;
+                           System.out.println(worker + " can work " + node);
+                        } finally {
+                           oosLock.unlock();
+                        }
                      } else {
-                        toClient.writeObject(new UpdateResponse(worker, node, false));
+                        oosLock.lock();
+                        try {
+                           toClient.reset();
+                           toClient.writeObject(new UpdateResponse(worker, node, false));
+                           System.out.println(worker + " can't work " + node);
+                           toClient.flush();
+                        } finally {
+                           oosLock.unlock();
+                        }
                      }
                   }
                   if (in instanceof Node) {
                      Node updatedNode = (Node) in;
                      int index = ((Node) in).getIndex();
                      nodes.set(index, updatedNode);
-                     shareToAll((Node) in, clientNumber);
-                     tokens.set(index, 0);
-                     //System.out.println("Node " + index + ": " + updatedNode.getChars());
+                     oosLock.lock();
+                     try {
+                        for (ObjectOutputStream out : clients) {
+                           out.reset();
+                           out.writeObject(updatedNode);
+                           out.flush();
+                        }
+                     } finally {
+                        oosLock.unlock();
+                     }
+                     tokens[index] = false;
+                     System.out.println("Node " + index + ": " + updatedNode.getChars());
                   }
                }
             } catch (ClassNotFoundException ex) {
@@ -141,7 +176,8 @@ public class Server {
                client.close();
             }
             System.out.println("Client disconnected");
-            removeDisconnectedClient(this);
+            System.out.println(tokens);
+            removeDisconnectedClient(toClient);
             client.close();
          } catch (NumberFormatException | IOException e) {
             e.printStackTrace();

@@ -38,8 +38,9 @@ public class Client {
          server = new Socket(host, port);
          System.out.println("Connected to host " + server.getInetAddress());
 
-         toServer = new ObjectOutputStream(server.getOutputStream());
-         fromServer = new ObjectInputStream(server.getInputStream());
+         toServer = new ObjectOutputStream(new BufferedOutputStream(server.getOutputStream()));
+         toServer.flush();
+         fromServer = new ObjectInputStream(new BufferedInputStream(server.getInputStream()));
          ReentrantLock oosLock = new ReentrantLock();
          nodes = (AtomicReferenceArray<Node>) fromServer.readObject();
 
@@ -51,16 +52,53 @@ public class Client {
          for (Worker worker : workers) {
             worker.start();
          }
-         
-         ResponseHandler responseHandler = new ResponseHandler();
-         responseHandler.start();
 
-         for (Worker worker : workers) {
-            worker.join();
+//         ResponseHandler responseHandler = new ResponseHandler();
+//         responseHandler.start();
+
+         while (true) {
+            Object in = null;
+            try {
+               try {
+                  in = fromServer.readObject();
+               } catch (SocketException ex) {
+               }
+               if (in instanceof Node) {
+                  Node node = (Node) in;
+                  nodes.set(node.getIndex(), node);
+                  System.out.println("Received new node:  " + node);
+               } else if (in instanceof UpdateResponse) {
+                  UpdateResponse response = (UpdateResponse) in;
+                  int worker = response.getWorkerID();
+                  int node = response.getWorkerNode();
+                  boolean canUpdate = response.isAvailable();
+                  
+                  System.out.println(response);
+                  if (canUpdate) {
+                     workers[worker].setCanUpdate(true);
+                     System.out.println(worker + " can work " + node);
+                  } else {
+                     workers[worker].setCanUpdate(false);
+                     System.out.println(worker + "can't work" + node);
+                  }
+                  workerLocks[worker].lock();
+                  try {
+                     workerConditions[worker].signal();
+                  } finally {
+                     workerLocks[worker].unlock();
+                  }
+               }
+            } catch (EOFException ef) {
+               fromServer.close();
+               toServer.close();
+               server.close();
+            } catch (IOException ex) {
+               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ClassNotFoundException ex) {
+               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            }
          }
 
-         server.close();
-         System.out.println("Threads finished");
       } catch (Exception e) {
          e.printStackTrace();
       }
@@ -99,10 +137,13 @@ public class Client {
                   int node = response.getWorkerNode();
                   boolean canUpdate = response.isAvailable();
 
+                  System.out.println(response);
                   if (canUpdate) {
                      workers[worker].setCanUpdate(true);
+                     System.out.println(worker + " can work " + node);
                   } else {
                      workers[worker].setCanUpdate(false);
+                     System.out.println(worker + "can't work" + node);
                   }
                   workerLocks[worker].lock();
                   try {
