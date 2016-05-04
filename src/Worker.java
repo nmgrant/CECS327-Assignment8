@@ -33,7 +33,7 @@ public class Worker extends Thread {
    boolean canUpdate;
 
    // Used to initialize the worker with all necessary variables
-   public Worker(ThreadGroup wg, AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
+   public Worker(AtomicReferenceArray<Node> nodeArray, ObjectOutputStream oos,
            ObjectInputStream ois, ReentrantLock l, Condition c, ReentrantLock oosLock, int wn) {
       this.nodeArray = nodeArray;
       this.output = oos;
