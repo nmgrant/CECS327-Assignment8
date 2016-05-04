@@ -113,13 +113,6 @@ public class Server {
             try {
                while (true) {
                   try {
-                     int total = 0;
-                     for (int i = 0; i < tokens.length; i++) {
-                        if (tokens[i]) {
-                           total++;
-                        }
-                     }
-                     System.out.println(total);
                      in = fromClient.readObject();
                   } catch (SocketException ex) {
                      break;
@@ -133,10 +126,10 @@ public class Server {
                      if (!tokens[node]) {
                         oosLock.lock();
                         try {
+                           toClient.reset();
                            toClient.writeObject(new UpdateResponse(worker, node, true));
                            toClient.flush();
                            tokens[node] = true;
-                           System.out.println(worker + " can work " + node);
                         } finally {
                            oosLock.unlock();
                         }
@@ -145,7 +138,6 @@ public class Server {
                         try {
                            toClient.reset();
                            toClient.writeObject(new UpdateResponse(worker, node, false));
-                           System.out.println(worker + " can't work " + node);
                            toClient.flush();
                         } finally {
                            oosLock.unlock();
@@ -176,7 +168,6 @@ public class Server {
                client.close();
             }
             System.out.println("Client disconnected");
-            System.out.println(tokens);
             removeDisconnectedClient(toClient);
             client.close();
          } catch (NumberFormatException | IOException e) {

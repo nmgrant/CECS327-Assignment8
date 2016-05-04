@@ -53,9 +53,6 @@ public class Client {
             worker.start();
          }
 
-//         ResponseHandler responseHandler = new ResponseHandler();
-//         responseHandler.start();
-
          while (true) {
             Object in = null;
             try {
@@ -66,20 +63,16 @@ public class Client {
                if (in instanceof Node) {
                   Node node = (Node) in;
                   nodes.set(node.getIndex(), node);
-                  System.out.println("Received new node:  " + node);
                } else if (in instanceof UpdateResponse) {
                   UpdateResponse response = (UpdateResponse) in;
                   int worker = response.getWorkerID();
                   int node = response.getWorkerNode();
                   boolean canUpdate = response.isAvailable();
                   
-                  System.out.println(response);
                   if (canUpdate) {
                      workers[worker].setCanUpdate(true);
-                     System.out.println(worker + " can work " + node);
                   } else {
                      workers[worker].setCanUpdate(false);
-                     System.out.println(worker + "can't work" + node);
                   }
                   workerLocks[worker].lock();
                   try {
@@ -130,20 +123,16 @@ public class Client {
                if (in instanceof Node) {
                   Node node = (Node) in;
                   nodes.set(node.getIndex(), node);
-                  //System.out.println("Node " + node.getIndex() + ": " + nodes.get(node.getIndex()).getChars());
                } else if (in instanceof UpdateResponse) {
                   UpdateResponse response = (UpdateResponse) in;
                   int worker = response.getWorkerID();
                   int node = response.getWorkerNode();
                   boolean canUpdate = response.isAvailable();
 
-                  System.out.println(response);
                   if (canUpdate) {
                      workers[worker].setCanUpdate(true);
-                     System.out.println(worker + " can work " + node);
                   } else {
                      workers[worker].setCanUpdate(false);
-                     System.out.println(worker + "can't work" + node);
                   }
                   workerLocks[worker].lock();
                   try {
