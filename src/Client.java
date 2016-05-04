@@ -1,3 +1,27 @@
+/**
+ * Name: Nicholas Grant & Evan McNaughtan
+ * Date: 05/04/2016
+ * Course #: CECS 327 M/W
+ * Email: ngrant40@gmail.com & evan4james@yahoo.com
+ * Description: For this program, we were tasked with maintaining a distributed
+ * set of nodes (150) containing a character array (500 characters) and ensuring
+ * that it is synchronized between 3 computers. Additionally, each computer will
+ * have 100 worker threads shuffling the character arrays of a random node.
+ * This is accomplished by adopting a client/server architecture using
+ * message passing between the client/server. The server will receive connections
+ * from clients and then spawn a thread to handle communicating with that client.
+ * The clients will receive the array of nodes on the server from the newly
+ * spawned server thread. Then, the client will spawn 100 worker threads
+ * and wait for the server to send responses. The worker threads will be
+ * responsible for requesting nodes to work on and updating nodes. The server
+ * thread will be responsible for receiving the worker's node requests
+ * and allowing/denying them based on whether or not the current node
+ * is being worked on as determined by a boolean array (tokens). It will 
+ * additionally handle any nodes sent to it and send them back to the other 
+ * clients. The client will be responsible for receiving the responses from the 
+ * server thread and waking up the worker if they are allowed to work on the 
+ * node. It will also receive updated nodes from the server thread.
+ */
 
 import java.net.*;
 import java.io.*;
@@ -63,6 +87,7 @@ public class Client {
          // stream
          toServer = new ObjectOutputStream(
             new BufferedOutputStream(server.getOutputStream()));
+         toServer.flush();
          // Sets fromServer to a new object input stream from the server's input
          // stream
          fromServer = new ObjectInputStream(new BufferedInputStream(server.getInputStream()));

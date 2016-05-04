@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 // then sends the node back to the server.
 public class Worker extends Thread {
    
-   private final int NUMBER_OF_TURNS = 200;
+   private final int NUMBER_OF_TURNS = 10;
    // A concurrent array of nodes given by the client thread
    private AtomicReferenceArray<Node> nodeArray;
    // The output stream used to send requests

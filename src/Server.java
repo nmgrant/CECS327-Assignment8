@@ -1,8 +1,10 @@
 
 import java.net.*;
 import java.io.*;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -26,9 +28,9 @@ public class Server {
       = new AtomicReferenceArray<>(NUM_OF_NODES);
    // Initalize a hash set of objectoutputstream objects
    private static HashSet<ObjectOutputStream> clients = new HashSet<>();
-   // Initialize a boolean array of tokens with the number of nodes
-   private static boolean[] tokens = new boolean[NUM_OF_NODES];
-   // Declare an object output stream lock
+   // Initialize an integer array of tokens with the number of nodes
+   private static AtomicIntegerArray tokens = new AtomicIntegerArray(NUM_OF_NODES);
+   // Declare an object output stream lock used to prevent corrupt data
    private static ReentrantLock oosLock;
 
    // Main method
@@ -161,8 +163,8 @@ public class Server {
                   tokenCounter = 0;
                   // For loop to run through the token array and count how many
                   // tokens are in use
-                  for (int i = 0; i < tokens.length; i++) {
-                     if (tokens[i]) {
+                  for (int i = 0; i < tokens.length(); i++) {
+                     if (tokens.get(i) == 1) {
                         tokenCounter++;
                      }
                   }
@@ -188,9 +190,10 @@ public class Server {
                      // Set a int variable node to the worker node from request
                      int node = request.getWorkerNode();
                      // If the token is not taken, send the update response
-                     // with the given parameters
-                     if (!tokens[node]) {
-                        // Object output stream lock
+                     // with the given parameters. Atomically sets
+                     // the tokens variable to "true" if the token is unused.
+                     if (tokens.compareAndSet(node, 0, 1)) {
+                        // Object output stream lock to prevent corrupt data
                         oosLock.lock();
                         try {
                            // Resets the toClient object output stream and then
@@ -199,8 +202,6 @@ public class Server {
                            toClient.reset();
                            toClient.writeObject(new UpdateResponse(worker, node, true));
                            toClient.flush();
-                           // Sets the token at the given node position to true
-                           tokens[node] = true;
                         } finally {
                            // Finally unlocks the object output stream lock
                            oosLock.unlock();
@@ -208,7 +209,7 @@ public class Server {
                         // Else if the token is taken, send the update response
                         // with the given parameters
                      } else {
-                        // Object output stream lock
+                        // Object output stream lock to prevent corrupt data
                         oosLock.lock();
                         try {
                            // Resets the toClient object output stream and then
@@ -247,7 +248,7 @@ public class Server {
                      }
                      // Sets the token at the given index to false, notifying 
                      // that the given index is no longer being workerd on
-                     tokens[index] = false;
+                     tokens.compareAndSet(index, 1, 0);
                      // Prints out the node at the given index and its updated
                      // contents
                      System.out.println("Node " + index + ": "
