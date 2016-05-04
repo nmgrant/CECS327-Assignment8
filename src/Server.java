@@ -30,8 +30,8 @@ public class Server {
          while (true) {
             Socket socket = listener.accept();
             ClientThread client = new ClientThread(socket, clientNumber++, nodes);
-            clients.add(client);
             client.start();
+            clients.add(client);
             System.out.println("ThreadedWebServer Connected to "
                     + listener.getInetAddress());
          }
@@ -132,20 +132,16 @@ public class Server {
                      nodes.set(index, updatedNode);
                      shareToAll((Node) in, clientNumber);
                      tokens.set(index, 0);
-                     System.out.println("Node " + index + ": " + updatedNode.getChars());
+                     //System.out.println("Node " + index + ": " + updatedNode.getChars());
                   }
                }
             } catch (ClassNotFoundException ex) {
                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
             } catch (EOFException ef) {
-               fromClient.close();
-               toClient.close();
                client.close();
             }
             System.out.println("Client disconnected");
             removeDisconnectedClient(this);
-            fromClient.close();
-            toClient.close();
             client.close();
          } catch (NumberFormatException | IOException e) {
             e.printStackTrace();

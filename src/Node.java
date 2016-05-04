@@ -8,7 +8,7 @@ public class Node implements Serializable {
    private int worker;
 
    public Node(int index, int worker) {
-      charArray = new char[5];
+      charArray = new char[500];
       this.index = index;
       this.worker = worker;
 
@@ -48,9 +48,5 @@ public class Node implements Serializable {
          result += c;
       }
       return result;
-   }
-
-   public char getFirst() {
-      return charArray[0];
    }
 }

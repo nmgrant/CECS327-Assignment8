@@ -55,8 +55,9 @@ public class Worker extends Thread {
 
                oosLock.lock();
                try {
-                  output.writeObject(update(nodeIndex));
-                  System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
+                  update(nodeIndex);
+                  output.writeObject(nodeArray.get(nodeIndex));
+                  //System.out.println(workerNumber + " shuffled " + nodeIndex + " to " + nodeArray.get(nodeIndex).getChars());
                } finally {
                   oosLock.unlock();
                }
@@ -84,9 +85,8 @@ public class Worker extends Thread {
       this.canUpdate = canUpdate;
    }
 
-   public Node update(int index) {
+   public void update(int index) {
       nodeArray.get(index).shuffleArray();
       nodeArray.get(index).setWorker(workerNumber);
-      return nodeArray.get(index);
    }
 }

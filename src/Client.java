@@ -59,8 +59,6 @@ public class Client {
             worker.join();
          }
 
-         fromServer.close();
-         toServer.close();
          server.close();
          System.out.println("Threads finished");
       } catch (Exception e) {
@@ -88,15 +86,13 @@ public class Client {
                } catch (SocketException ex) {
                   System.out.println("socket closed");
                   System.out.println(workerGroup.activeCount());
-                  fromServer.close();
-                  toServer.close();
                   server.close();
                   break;
                }
                if (in instanceof Node) {
                   Node node = (Node) in;
                   nodes.set(node.getIndex(), node);
-                  System.out.println("Node " + node.getIndex() + ": " + nodes.get(node.getIndex()).getChars());
+                  //System.out.println("Node " + node.getIndex() + ": " + nodes.get(node.getIndex()).getChars());
                } else if (in instanceof UpdateResponse) {
                   UpdateResponse response = (UpdateResponse) in;
                   int worker = response.getWorkerID();
@@ -118,8 +114,6 @@ public class Client {
             } catch (EOFException ef) {
                try {
                   System.out.println("socket closed2");
-                  fromServer.close();
-                  toServer.close();
                   server.close();
                   break;
                } catch (IOException ex) {
