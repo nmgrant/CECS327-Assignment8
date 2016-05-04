@@ -6,7 +6,6 @@ import java.io.Serializable;
 // The body of the response includes the worker that made the request,
 // the node they wish to update, and a boolean variable indicating whether
 // or not they can update that node.
-
 public class UpdateResponse implements Serializable {
    // The workerID of the requesting worker
    private int workerID;
