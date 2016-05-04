@@ -2,8 +2,11 @@
 import java.net.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -12,7 +15,7 @@ public class Server {
    static int clientNumber = 0;
    static AtomicReferenceArray<Node> nodes = new AtomicReferenceArray<>(150);
    static ArrayList<ClientThread> clients = new ArrayList<>();
-   static boolean[] tokens = new boolean[150];
+   static AtomicIntegerArray tokens = new AtomicIntegerArray(150);
 
    public static void main(String[] args) {
       for (int i = 0; i < nodes.length(); i++) {
@@ -37,13 +40,33 @@ public class Server {
       }
    }
 
+   public static void removeDisconnectedClient(ClientThread client) {
+      Iterator<ClientThread> iter = clients.iterator();
+
+      while (iter.hasNext()) {
+         ClientThread thread = iter.next();
+
+         if (thread == client) {
+            iter.remove();
+         }
+      }
+
+      for (ClientThread thread : clients) {
+         if (thread == client) {
+            clients.remove(thread);
+         }
+      }
+   }
+
    public static void shareToAll(Node node, int sendingClient) {
       for (int i = 0; i < clients.size(); i++) {
-         try {
-            (clients.get(i)).getToClient().writeObject(node);
-            (clients.get(i)).getToClient().flush();
-         } catch (IOException ex) {
-            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+         if (clients.get(i).getClientNumber() != sendingClient) {
+            try {
+               (clients.get(i)).getToClient().writeObject(node);
+               (clients.get(i)).getToClient().flush();
+            } catch (IOException ex) {
+               Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+            }
          }
       }
    }
@@ -71,6 +94,10 @@ public class Server {
       public ObjectOutputStream getToClient() {
          return toClient;
       }
+      
+      public int getClientNumber() {
+         return clientNumber;
+      }
 
       @Override
       public void run() {
@@ -82,16 +109,20 @@ public class Server {
             Object in;
             try {
                while (true) {
-                  in = fromClient.readObject();
+                  try {
+                     in = fromClient.readObject();
+                  } catch(SocketException ex) {
+                     break;
+                  } catch(IOException ex) {
+                     break;
+                  }
                   if (in instanceof UpdateRequest) {
                      UpdateRequest request = (UpdateRequest) in;
                      int worker = request.getWorkerID();
                      int node = request.getWorkerNode();
-                     if (!tokens[node]) {
+                     if (tokens.compareAndSet(node, 0, 1)) {
                         toClient.writeObject(new UpdateResponse(worker, node, true));
-                        tokens[node] = true;
                      } else {
-                        requests.add(request);
                         toClient.writeObject(new UpdateResponse(worker, node, false));
                      }
                   }
@@ -100,7 +131,7 @@ public class Server {
                      int index = ((Node) in).getIndex();
                      nodes.set(index, updatedNode);
                      shareToAll((Node) in, clientNumber);
-                     tokens[index] = false;
+                     tokens.set(index, 0);
                      System.out.println("Node " + index + ": " + updatedNode.getChars());
                   }
                }
@@ -111,7 +142,8 @@ public class Server {
                toClient.close();
                client.close();
             }
-
+            System.out.println("Client disconnected");
+            removeDisconnectedClient(this);
             fromClient.close();
             toClient.close();
             client.close();

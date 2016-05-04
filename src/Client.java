@@ -13,6 +13,7 @@ public class Client {
    private AtomicReferenceArray<Node> nodes;
    private ObjectInputStream fromServer;
    private ObjectOutputStream toServer;
+   private Socket server;
    private Worker[] workers;
    private ReentrantLock[] workerLocks = new ReentrantLock[100];
    private Condition[] workerConditions = new Condition[100];
@@ -34,7 +35,7 @@ public class Client {
 
    public void connectToServer(String host, int port) {
       try {
-         Socket server = new Socket(host, port);
+         server = new Socket(host, port);
          System.out.println("Connected to host " + server.getInetAddress());
 
          toServer = new ObjectOutputStream(server.getOutputStream());
@@ -48,14 +49,50 @@ public class Client {
          }
 
          for (Worker worker : workers) {
-            System.out.println("");
             worker.start();
          }
+         
+         ResponseHandler responseHandler = new ResponseHandler();
+         responseHandler.start();
 
-         do {
-            Object in;
+         for (Worker worker : workers) {
+            worker.join();
+         }
+
+         fromServer.close();
+         toServer.close();
+         server.close();
+         System.out.println("Threads finished");
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+   }
+
+   public static void main(String[] args) {
+      Client client = new Client();
+      client.connectToServer("localhost", 3333);
+   }
+
+   public class ResponseHandler extends Thread {
+
+      public ResponseHandler() {
+      }
+
+      @Override
+      public void run() {
+         while (true) {
+            Object in = null;
             try {
-               in = fromServer.readObject();
+               try {
+                  in = fromServer.readObject();
+               } catch (SocketException ex) {
+                  System.out.println("socket closed");
+                  System.out.println(workerGroup.activeCount());
+                  fromServer.close();
+                  toServer.close();
+                  server.close();
+                  break;
+               }
                if (in instanceof Node) {
                   Node node = (Node) in;
                   nodes.set(node.getIndex(), node);
@@ -79,25 +116,22 @@ public class Client {
                   }
                }
             } catch (EOFException ef) {
-               fromServer.close();
-               toServer.close();
-               server.close();
+               try {
+                  System.out.println("socket closed2");
+                  fromServer.close();
+                  toServer.close();
+                  server.close();
+                  break;
+               } catch (IOException ex) {
+                  Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+               }
+            } catch (IOException ex) {
+               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ClassNotFoundException ex) {
+               Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             }
-         } while (workerGroup.activeCount() > 2);
-         
-         
-         System.out.println("Threads finished");
-         fromServer.close();
-         toServer.close();
-         server.close();
-      } catch (Exception e) {
-         e.printStackTrace();
+         }
       }
-   }
-
-   public static void main(String[] args) {
-      Client client = new Client();
-      client.connectToServer("localhost", 3333);
    }
 
    public class RequestHandler extends Thread {
