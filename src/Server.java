@@ -1,7 +1,6 @@
 
 import java.net.*;
 import java.io.*;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -40,15 +39,20 @@ public class Server {
       for (int i = 0; i < nodes.length(); i++) {
          nodes.set(i, new Node(i, 0));
       }
+      
+      if (args.length != 1) {
+         System.out.println("Usage: java Server port");
+         System.exit(0);
+      }
 
       System.out.println("Server is running");
 
       // Sets the object output stream lock to a new reentrant lock
       oosLock = new ReentrantLock();
 
-      // Try, catch that declares a seversocket at port 3333
+      // Try, catch that declares a seversocket at given port
       try {
-         ServerSocket listener = new ServerSocket(3333);
+         ServerSocket listener = new ServerSocket(Integer.parseInt(args[0]));
          // Infinite while loop to keep running and listen for any clients 
          while (true) {
             // Initializes a socket to accept a client

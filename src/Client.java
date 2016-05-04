@@ -1,3 +1,4 @@
+
 /**
  * Name: Nicholas Grant & Evan McNaughtan
  * Date: 05/04/2016
@@ -16,10 +17,10 @@
  * responsible for requesting nodes to work on and updating nodes. The server
  * thread will be responsible for receiving the worker's node requests
  * and allowing/denying them based on whether or not the current node
- * is being worked on as determined by a boolean array (tokens). It will 
- * additionally handle any nodes sent to it and send them back to the other 
- * clients. The client will be responsible for receiving the responses from the 
- * server thread and waking up the worker if they are allowed to work on the 
+ * is being worked on as determined by a boolean array (tokens). It will
+ * additionally handle any nodes sent to it and send them back to the other
+ * clients. The client will be responsible for receiving the responses from the
+ * server thread and waking up the worker if they are allowed to work on the
  * node. It will also receive updated nodes from the server thread.
  */
 
@@ -59,19 +60,24 @@ public class Client {
    // Client constructor that initializes the workers array to the number of 
    // workers and intializes each worker in the reentrant lock and condition
    // arrays with a new reentrant lock and condition
-   public Client() {
+   public Client(String[] args) {
       workers = new Worker[NUM_OF_WORKERS];
       for (int i = 0; i < NUM_OF_WORKERS; i++) {
          workerLocks[i] = new ReentrantLock();
          workerConditions[i] = workerLocks[i].newCondition();
+      }
+
+      if (args.length != 2) {
+         System.out.println("Usage: java Client host port");
+         System.exit(1);
       }
    }
 
    // Main method that creates a new client object and calls the connect to 
    // server method with the given parameters of localhost and port 3333
    public static void main(String[] args) {
-      Client client = new Client();
-      client.connectToServer("localhost", 3333);
+      Client client = new Client(args);
+      client.connectToServer(args[0], Integer.parseInt(args[1]));
    }
 
    // Connect to server method that takes in a string for the host and the port
@@ -86,7 +92,7 @@ public class Client {
          // Sets toServer to a new object output stream from the server's output
          // stream
          toServer = new ObjectOutputStream(
-            new BufferedOutputStream(server.getOutputStream()));
+                 new BufferedOutputStream(server.getOutputStream()));
          toServer.flush();
          // Sets fromServer to a new object input stream from the server's input
          // stream
@@ -101,7 +107,7 @@ public class Client {
          // output stream lock, and index number
          for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker(nodes, toServer, fromServer, workerLocks[i],
-               workerConditions[i], oosLock, i);
+                    workerConditions[i], oosLock, i);
          }
 
          // For each worker in the workers array, starts the thread
@@ -122,14 +128,15 @@ public class Client {
                // statement
                if (in instanceof Node) {
                   // Sets a node object to the read object
-                  Node node = (Node)in;
+                  Node node = (Node) in;
                   // Sets nodes to the given index and the read node
                   nodes.set(node.getIndex(), node);
-               // Else if the read object is of type update response run through
-               // this else if statement
+                  System.out.println("Node " + node.getIndex() + " received: " + node.getChars());
+                  // Else if the read object is of type update response run through
+                  // this else if statement
                } else if (in instanceof UpdateResponse) {
                   // Sets an updateresponse object to the read object
-                  UpdateResponse response = (UpdateResponse)in;
+                  UpdateResponse response = (UpdateResponse) in;
                   // Sets an int variable to the response's worker id
                   int worker = response.getWorkerID();
                   // Sets an int variable to the response's node number
@@ -142,8 +149,8 @@ public class Client {
                   // given index to be able to update
                   if (canUpdate) {
                      workers[worker].setCanUpdate(true);
-                  // Else set the worker at the given index to not be able to 
-                  // update
+                     // Else set the worker at the given index to not be able to 
+                     // update
                   } else {
                      workers[worker].setCanUpdate(false);
                   }
